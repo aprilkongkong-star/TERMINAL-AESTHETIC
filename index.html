@@ -933,7 +933,7 @@
       </div>
       <div class="row">
         <label>字体大小<span class="val" id="v_size">14</span></label>
-        <input type="range" id="size" min="9" max="22" step="1" value="14">
+        <input type="range" id="size" min="9" max="48" step="1" value="14">
       </div>
       <div class="row">
         <label>弧度<span class="val" id="v_curve">0</span></label>
@@ -947,6 +947,10 @@
           <option value="serif">衬线 (复古)</option>
         </select>
       </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="fontBold">
+        <span>字体加粗</span>
+      </label>
       <label class="checkbox-row">
         <input type="checkbox" id="protectFace" checked>
         <span>避开画面中心区域</span>
@@ -988,8 +992,8 @@
         <input type="range" id="glow" min="0" max="100" step="5" value="0">
       </div>
       <div class="row">
-        <label>模糊度<span class="val" id="v_blur">20</span></label>
-        <input type="range" id="blur" min="0" max="60" step="5" value="20">
+        <label>模糊度<span class="val" id="v_blur">0</span></label>
+        <input type="range" id="blur" min="0" max="100" step="5" value="0">
       </div>
       <details class="advanced">
         <summary>自定义颜色</summary>
@@ -1593,6 +1597,7 @@ function drawCodeLayer() {
   const density = parseInt($('density').value, 10);
   const fontSize = parseInt($('size').value, 10);
   const fontType = $('font').value;
+  const fontBold = $('fontBold').checked;
   const protectFace = $('protectFace').checked;
   const curve = parseFloat($('curve').value) / 100;
   const c1 = $('codeC1').value;
@@ -1602,10 +1607,11 @@ function drawCodeLayer() {
   const blur = parseFloat($('blur').value);
   const charGlitch = parseFloat($('glitchChar').value) / 100;
 
+  const weight = fontBold ? '700 ' : '';
   const fontMap = {
-    mono:    `${fontSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`,
-    terminal:`${fontSize}px "Courier New", "Lucida Console", monospace`,
-    serif:   `italic ${fontSize}px "Courier Prime", Georgia, serif`,
+    mono:    `${weight}${fontSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`,
+    terminal:`${weight}${fontSize}px "Courier New", "Lucida Console", monospace`,
+    serif:   `italic ${weight}${fontSize}px "Courier Prime", Georgia, serif`,
   };
   ctx.font = fontMap[fontType];
   ctx.textBaseline = 'alphabetic';
@@ -1653,8 +1659,10 @@ function drawCodeLayer() {
     const useC1 = rng() < 0.55;
     const baseColor = useC1 ? c1 : c2;
     const lineAlpha = (place.alpha || 1) * (place.alphaMul || 1) * opacity;
-    const isBlurred = blur > 0 && rng() < blur / 100;
-    ctx.filter = isBlurred ? `blur(${(blur/100) * 1.8}px)` : 'none';
+    /* 模糊度:大于 0 时,有 (blur/100) 概率被模糊,模糊半径与 blur 成正比 */
+    const isBlurred = blur > 0 && rng() < (blur / 100);
+    const blurPx = isBlurred ? Math.max(0.5, blur / 12) : 0;  /* blur=60 时约 5px,明显可见 */
+    ctx.filter = blurPx > 0 ? `blur(${blurPx}px)` : 'none';
     ctx.shadowColor = baseColor;
     ctx.shadowBlur = glow > 0 ? glow / 10 : 0;
     ctx.fillStyle = hexWithAlpha(baseColor, lineAlpha);
