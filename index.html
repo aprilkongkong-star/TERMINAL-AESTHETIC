@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Terminal Aesthetic · Photo Editor</title>
+<meta name="description" content="将代码、故障美学叠加到你的照片上。在浏览器中本地处理,不上传任何数据。">
+<style>
+  :root {
+    --bg-0: #050608;
+    --bg-1: rgba(15, 20, 27, 0.55);
+    --bg-2: rgba(22, 28, 37, 0.7);
+    --bg-3: #161c25;
+    --bg-solid-1: #0a0d12;
+    --bg-solid-2: #0f141b;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --text-0: #f1f5f9;
+    --text-1: #94a3b8;
+    --text-2: #475569;
+    --accent: #ffffff;
+    --accent-dim: rgba(255, 255, 255, 0.5);
+    --accent-glow: rgba(255, 255, 255, 0.1);
+    --warn: #fbbf24;
+    --good: #4ade80;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --glass-blur: 16px;
+    --glass-saturate: 140%;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 网格背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ============================================================
+     顶部导航
+  ============================================================ */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(5, 6, 8, 0.6);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-bottom: 1px solid var(--line);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+  }
+  .brand .dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .brand .name {
+    font-size: 14px;
+    letter-spacing: 2px;
+    font-weight: 500;
+    color: var(--text-0);
+  }
+  .brand .tag {
+    font-size: 11px;
+    color: var(--text-2);
+    letter-spacing: 1px;
+  }
+  .topbar-right {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    letter-spacing: 1px;
+  }
+  .topbar-right .blink { color: var(--good); animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  /* ============================================================
+     首页 hero 区
+  ============================================================ */
+  .hero {
+    position: relative;
+    z-index: 2;
+    min-height: calc(100vh - 50px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .hero.gone {
+    display: none;
+  }
+
+  .hero-title {
+    text-align: center;
+    margin-bottom: 32px;
+    font-family: var(--mono);
+  }
+  .hero-title .label {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  .hero-title h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: 500;
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    color: var(--text-0);
+    text-shadow: 0 0 24px rgba(255,255,255,0.25), 0 0 60px rgba(255,255,255,0.1);
+  }
+  .hero-title h1 .accent { color: var(--accent); }
+  .hero-title .sub {
+    font-size: 13px;
+    color: var(--text-1);
+    letter-spacing: 1px;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ============================================================
+     IDE 上传框
+  ============================================================ */
+  .ide-uploader {
+    background: var(--bg-1);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 80px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .ide-uploader:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 120px var(--accent-glow);
+  }
+  .ide-uploader.dragover {
+    border-color: var(--accent);
+    background: var(--bg-2);
+  }
+
+  .ide-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .ide-titlebar .dots { display: flex; gap: 6px; }
+  .ide-titlebar .dots span {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+  }
+  .ide-titlebar .dots span:nth-child(1) { background: #ff5f57; }
+  .ide-titlebar .dots span:nth-child(2) { background: #febc2e; }
+  .ide-titlebar .dots span:nth-child(3) { background: #28c840; }
+  .ide-titlebar .filename {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-1);
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+  }
+  .ide-titlebar .actions {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .ide-body {
+    padding: 22px 0;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.8;
+    background: var(--bg-1);
+  }
+  .ide-line {
+    display: flex;
+    align-items: baseline;
+    padding: 0 18px;
+  }
+  .ide-line .ln {
+    color: var(--text-2);
+    width: 28px;
+    flex-shrink: 0;
+    font-size: 12px;
+    user-select: none;
+  }
+  .ide-line .code { color: var(--text-0); }
+  .tk-comment { color: #6b7c93; font-style: italic; }
+  .tk-keyword { color: #ff79c6; }
+  .tk-string  { color: #50fa7b; }
+  .tk-fn      { color: #8be9fd; }
+  .tk-param   { color: #f1fa8c; }
+  .tk-punct   { color: var(--text-1); }
+
+  .cursor {
+    display: inline-block;
+    width: 8px; height: 16px;
+    background: var(--accent);
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: caret 1s steps(2) infinite;
+  }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  .ide-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+    letter-spacing: 1px;
+  }
+  .ide-status .left { display: flex; gap: 16px; }
+  .ide-status .accent { color: var(--accent); }
+
+  .hero-foot {
+    margin-top: 28px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 1.8;
+  }
+  .hero-foot .accent { color: var(--good); }
+
+  /* ============================================================
+     编辑器(上传后)
+  ============================================================ */
+  .editor {
+    display: none;
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .editor.active {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    align-items: start;
+    animation: fadeIn 0.5s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 980px) {
+    .editor.active { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  }
+
+  .canvas-col {
+    position: sticky;
+    top: 70px;
+    align-self: start;
+  }
+  @media (max-width: 980px) {
+    .canvas-col { position: sticky; top: 56px; }
+  }
+
+  .canvas-frame {
+    background: var(--bg-1);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .canvas-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .canvas-toolbar .filename {
+    color: var(--text-1);
+    margin-right: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .canvas-toolbar button {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-1);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .canvas-toolbar button:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+  .canvas-stage {
+    background: #000;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: calc(100vh - 200px);
+    min-height: 300px;
+  }
+  @media (max-width: 980px) {
+    .canvas-stage { max-height: 50vh; min-height: 240px; padding: 8px; }
+  }
+  #canvas {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100vh - 240px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  @media (max-width: 980px) {
+    #canvas { max-height: calc(50vh - 40px); }
+  }
+
+  /* ============================================================
+     右侧参数面板(独立滚动)
+  ============================================================ */
+  .panel {
+    background: var(--bg-1);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: sticky;
+    top: 70px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  @media (max-width: 980px) {
+    .panel {
+      position: relative;
+      top: 0;
+      max-height: none;
+    }
+  }
+  .panel::-webkit-scrollbar { width: 6px; }
+  .panel::-webkit-scrollbar-track { background: transparent; }
+  .panel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+  .panel::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section:last-child { border-bottom: none; }
+  .section h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-2);
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .section h3 .num { color: var(--accent); }
+
+  .row { margin-bottom: 12px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-1);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+  }
+  .row label .val {
+    float: right;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .row input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .row input[type=text],
+  .row input[type=color],
+  .row textarea,
+  .row select {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--line-strong);
+    color: var(--text-0);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    transition: border-color 0.15s;
+  }
+  .row input:focus, .row textarea:focus, .row select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .row textarea {
+    min-height: 76px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .row textarea.has-warn { border-color: var(--warn); }
+  .row input[type=color] { padding: 2px; height: 32px; cursor: pointer; }
+
+  .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .filter-card {
+    cursor: pointer; border-radius: 4px; overflow: hidden;
+    border: 1px solid var(--line-strong);
+    transition: all 0.15s;
+    aspect-ratio: 1.2/1; position: relative;
+  }
+  .filter-card:hover { border-color: var(--accent-dim); transform: scale(1.04); }
+  .filter-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .filter-card .swatch { position: absolute; inset: 0; }
+  .filter-card .name {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); color: #fff;
+    font-size: 9px; padding: 2px 4px; text-align: center;
+    font-family: var(--mono); letter-spacing: 0.5px;
+  }
+
+  .color-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .color-card {
+    aspect-ratio: 1; cursor: pointer; border-radius: 3px;
+    border: 1px solid var(--line-strong);
+    transition: all 0.15s;
+  }
+  .color-card:hover { border-color: var(--accent-dim); transform: scale(1.1); }
+  .color-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+
+  .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .layout-grid button {
+    background: var(--bg-0);
+    border: 1px solid var(--line-strong);
+    color: var(--text-1);
+    padding: 7px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .layout-grid button:hover { border-color: var(--accent-dim); color: var(--text-0); }
+  .layout-grid button.active {
+    background: var(--accent);
+    color: var(--bg-0);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .actions {
+    padding: 16px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--bg-2);
+    display: flex; gap: 8px;
+    position: sticky;
+    bottom: 0;
+  }
+  .btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-0);
+    padding: 9px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--bg-0);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn.primary:hover {
+    background: #66e3ff;
+    box-shadow: 0 0 16px var(--accent-glow);
+    color: var(--bg-0);
+  }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-1); cursor: pointer;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+  .checkbox-row input { accent-color: var(--accent); }
+
+  #fileInput { display: none; }
+
+  .hint-text { font-size: 11px; color: var(--text-2); margin-top: 4px; line-height: 1.5; font-family: var(--mono); }
+  .color-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .advanced { margin-top: 8px; }
+  .advanced summary {
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--text-2);
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    list-style: none;
+    padding: 4px 0;
+    user-select: none;
+  }
+  .advanced summary::before { content: '▸ '; color: var(--accent); }
+  .advanced[open] summary::before { content: '▾ '; }
+  .advanced summary:hover { color: var(--text-1); }
+
+  .warn-bubble {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--warn);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-top: 6px;
+    line-height: 1.4;
+    display: none;
+    font-family: var(--mono);
+  }
+  .warn-bubble.show { display: block; }
+
+  .lightbox {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+    backdrop-filter: blur(8px);
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
+  .lightbox .close {
+    position: absolute; top: 20px; right: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    color: var(--text-0);
+    font-size: 20px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: var(--mono);
+  }
+  .lightbox .close:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* 移动端适配 */
+  @media (max-width: 600px) {
+    .topbar { padding: 10px 14px; }
+    .brand .tag { display: none; }
+    .topbar-right { font-size: 10px; }
+
+    .hero { padding: 24px 16px; min-height: calc(100vh - 50px); }
+    .hero-title { margin-bottom: 24px; }
+    .hero-title h1 { letter-spacing: 2px; }
+    .hero-title .sub { font-size: 12px; padding: 0 16px; }
+
+    .ide-body { font-size: 12px; padding: 16px 0; }
+    .ide-line { padding: 0 12px; }
+    .ide-line .ln { width: 24px; }
+
+    .panel { border-radius: 6px; }
+    .section { padding: 14px; }
+    .filter-grid { grid-template-columns: repeat(4, 1fr); }
+    .color-grid { grid-template-columns: repeat(8, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="dot"></div>
+    <div class="name">TERMINAL_AESTHETIC</div>
+    <div class="tag">// photo editor</div>
+  </div>
+  <div class="topbar-right">
+    <span class="blink">●</span> LOCAL_PROCESSING
+  </div>
+</div>
+
+<!-- 首页 hero -->
+<div class="hero" id="hero">
+  <div class="hero-title">
+    <h1>TERMINAL AESTHETIC</h1>
+    <div class="sub">把代码、故障美学叠加到你的照片上... 所有处理都在你浏览器完成,不会被上传。</div>
+  </div>
+
+  <div class="ide-uploader" id="uploadZone">
+    <div class="ide-titlebar">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="filename">upload_photo.js</div>
+      <div class="actions">CLICK TO BROWSE</div>
+    </div>
+    <div class="ide-body">
+      <div class="ide-line">
+        <span class="ln">1</span>
+        <span class="code"><span class="tk-comment">// drag &amp; drop your photo here</span></span>
+      </div>
+      <div class="ide-line">
+        <span class="ln">2</span>
+        <span class="code"><span class="tk-comment">// or click anywhere in this window</span></span>
+      </div>
+      <div class="ide-line">
+        <span class="ln">3</span>
+        <span class="code">&nbsp;</span>
+      </div>
+      <div class="ide-line">
+        <span class="ln">4</span>
+        <span class="code"><span class="tk-keyword">const</span> <span class="tk-param">photo</span> <span class="tk-punct">=</span> <span class="tk-fn">await</span> <span class="tk-fn">user</span><span class="tk-punct">.</span><span class="tk-fn">upload</span><span class="tk-punct">(</span><span class="tk-string">"<span id="typingText"></span>"</span><span class="tk-punct">);</span><span class="cursor"></span></span>
+      </div>
+      <div class="ide-line">
+        <span class="ln">5</span>
+        <span class="code"><span class="tk-keyword">return</span> <span class="tk-fn">render</span><span class="tk-punct">(</span><span class="tk-param">photo</span><span class="tk-punct">);</span></span>
+      </div>
+    </div>
+    <div class="ide-status">
+      <div class="left">
+        <span><span class="accent">JS</span> · UTF-8</span>
+        <span>LN 4 · COL 38</span>
+      </div>
+      <div>WAITING_FOR_INPUT...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 编辑器 -->
+<div class="editor" id="editor">
+
+  <div class="canvas-col">
+    <div class="canvas-frame">
+      <div class="canvas-toolbar">
+        <div class="filename" id="canvasFilename">photo.png</div>
+        <button id="changeBtn">换一张</button>
+        <button id="zoomBtn">放大</button>
+      </div>
+      <div class="canvas-stage">
+        <canvas id="canvas" width="800" height="1000"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">// CONTROL_PANEL</div>
+
+    <div class="section">
+      <h3><span class="num">[01]</span> 排版</h3>
+      <div class="row">
+        <label>排版方式</label>
+        <div class="layout-grid" id="layoutBtns">
+          <button data-layout="bands" class="active">水平条带</button>
+          <button data-layout="scatter">自由散布</button>
+          <button data-layout="block">居中段落</button>
+          <button data-layout="projected">贴脸投影</button>
+          <button data-layout="topLeft">左上段落</button>
+          <button data-layout="topRight">右上段落</button>
+          <button data-layout="bottomLeft">左下段落</button>
+          <button data-layout="bottomRight">右下段落</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>代码密度<span class="val" id="v_density">22</span></label>
+        <input type="range" id="density" min="4" max="80" step="1" value="22">
+      </div>
+      <div class="row">
+        <label>字体大小<span class="val" id="v_size">14</span></label>
+        <input type="range" id="size" min="9" max="22" step="1" value="14">
+      </div>
+      <div class="row">
+        <label>弧度<span class="val" id="v_curve">0</span></label>
+        <input type="range" id="curve" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <label>字体类型</label>
+        <select id="font">
+          <option value="mono" selected>等宽字</option>
+          <option value="terminal">终端字</option>
+          <option value="serif">衬线 (复古)</option>
+        </select>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="protectFace" checked>
+        <span>避开画面中心区域</span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3><span class="num">[02]</span> 滤镜</h3>
+      <div class="row">
+        <div class="filter-grid" id="filterCards"></div>
+      </div>
+      <div class="row">
+        <label>滤镜强度<span class="val" id="v_filterMix">0</span></label>
+        <input type="range" id="filterMix" min="0" max="100" step="5" value="0">
+      </div>
+      <details class="advanced">
+        <summary>自定义颜色</summary>
+        <div class="row" style="margin-top: 10px;">
+          <label>暗部 / 亮部</label>
+          <div class="color-pair">
+            <input type="color" id="duoDark" value="#000000">
+            <input type="color" id="duoLight" value="#ffffff">
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3><span class="num">[03]</span> 代码颜色</h3>
+      <div class="row">
+        <div class="color-grid" id="codeColorGrid"></div>
+      </div>
+      <div class="row">
+        <label>透明度<span class="val" id="v_opacity">85</span></label>
+        <input type="range" id="opacity" min="20" max="100" step="5" value="85">
+      </div>
+      <div class="row">
+        <label>发光<span class="val" id="v_glow">0</span></label>
+        <input type="range" id="glow" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <label>模糊度<span class="val" id="v_blur">20</span></label>
+        <input type="range" id="blur" min="0" max="60" step="5" value="20">
+      </div>
+      <details class="advanced">
+        <summary>自定义颜色</summary>
+        <div class="row" style="margin-top: 10px;">
+          <label>主色 / 辅色</label>
+          <div class="color-pair">
+            <input type="color" id="codeC1" value="#000000">
+            <input type="color" id="codeC2" value="#444444">
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3><span class="num">[04]</span> 代码内容</h3>
+      <div class="row">
+        <label>代码语言</label>
+        <select id="codePool">
+          <option value="js" selected>JavaScript</option>
+          <option value="py">Python</option>
+          <option value="java">Java</option>
+          <option value="cpp">C++</option>
+          <option value="poetry">代码诗</option>
+          <option value="json">抽象 / 类 JSON</option>
+          <option value="custom">仅自定义</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>自定义片段(每行一条)</label>
+        <textarea id="customCode" placeholder="if (you.see) you.are.seen();&#10;return null;&#10;每行一条,会随机抽取展示"></textarea>
+        <div class="warn-bubble" id="customWarn"></div>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="mixCustom" checked>
+        <span>自定义与预设混合</span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3><span class="num">[05]</span> 故障风</h3>
+      <div class="row">
+        <label>RGB 分离<span class="val" id="v_glitchRgb">0</span></label>
+        <input type="range" id="glitchRgb" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <label>扫描线<span class="val" id="v_glitchScan">0</span></label>
+        <input type="range" id="glitchScan" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <label>字符乱码<span class="val" id="v_glitchChar">0</span></label>
+        <input type="range" id="glitchChar" min="0" max="100" step="5" value="0">
+      </div>
+      <div class="row">
+        <label>撕裂类型</label>
+        <select id="glitchHeavyType">
+          <option value="datamosh" selected>水平垂直</option>
+          <option value="blocks">方块</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>撕裂强度<span class="val" id="v_glitchHeavy">0</span></label>
+        <input type="range" id="glitchHeavy" min="0" max="100" step="5" value="0">
+        <div class="hint-text">海报级故障效果</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="reshuffleBtn">REGENERATE</button>
+      <button class="btn primary" id="downloadBtn">DOWNLOAD</button>
+    </div>
+  </div>
+
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<div class="lightbox" id="lightbox">
+  <button class="close" id="lightboxClose">×</button>
+  <img id="lightboxImg" alt="">
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   打字机效果
+============================================================ */
+const TYPING_TEXTS = [
+  'click here to upload',
+  'drop your photo here',
+  'choose an image file',
+  'jpg, png, webp ok',
+];
+let typingIdx = 0;
+let typingChar = 0;
+let typingDir = 1;
+let typingTimer = null;
+
+function runTypingAnimation() {
+  const el = document.getElementById('typingText');
+  if (!el) return;
+  const cur = TYPING_TEXTS[typingIdx];
+  if (typingDir === 1) {
+    typingChar++;
+    el.textContent = cur.slice(0, typingChar);
+    if (typingChar >= cur.length) {
+      typingDir = -1;
+      typingTimer = setTimeout(runTypingAnimation, 2000);
+      return;
+    }
+    typingTimer = setTimeout(runTypingAnimation, 60 + Math.random() * 60);
+  } else {
+    typingChar--;
+    el.textContent = cur.slice(0, typingChar);
+    if (typingChar <= 0) {
+      typingDir = 1;
+      typingIdx = (typingIdx + 1) % TYPING_TEXTS.length;
+      typingTimer = setTimeout(runTypingAnimation, 400);
+      return;
+    }
+    typingTimer = setTimeout(runTypingAnimation, 30);
+  }
+}
+
+function stopTyping() {
+  if (typingTimer) clearTimeout(typingTimer);
+  typingTimer = null;
+}
+
+/* ============================================================
+   配置 - 滤镜 / 代码颜色 / 代码池 / 敏感词
+============================================================ */
+const FILTER_PRESETS = [
+  { name: '原图',     dark: '#000000', light: '#ffffff', original: true },
+  { name: 'Matrix',   dark: '#001a0d', light: '#5fff8f' },
+  { name: 'Cyber',    dark: '#1a0033', light: '#ff2bd6' },
+  { name: 'Blade',    dark: '#001428', light: '#ff8c42' },
+  { name: 'Bone',     dark: '#1a1410', light: '#fff5e0' },
+  { name: 'Print',    dark: '#001f3f', light: '#7fdbff' },
+  { name: 'Toxic',    dark: '#0a1f00', light: '#c8ff2e' },
+  { name: 'Crimson',  dark: '#1a0008', light: '#ff5566' },
+];
+
+const CODE_COLORS = [
+  { name: 'Black',  c1: '#000000', c2: '#444444' },
+  { name: 'White',  c1: '#ffffff', c2: '#cccccc' },
+  { name: 'Green',  c1: '#5fff8f', c2: '#bfffd0' },
+  { name: 'Amber',  c1: '#f4a261', c2: '#ffd699' },
+  { name: 'Cyan',   c1: '#00d4ff', c2: '#88f5ff' },
+  { name: 'Pink',   c1: '#ff8ec7', c2: '#ffcce0' },
+  { name: 'Cream',  c1: '#fff5e0', c2: '#ffd699' },
+  { name: 'Red',    c1: '#ff4757', c2: '#ffb3b3' },
+];
+
+const CODE_POOLS = {
+  js: [
+    'const fate = await user.observe();',
+    'if (this.exists()) return this;',
+    'export default function destiny() {}',
+    'const echo = memories.filter(m => m.kept);',
+    'window.addEventListener("loss", handle);',
+    'try { live(); } catch(e) { console.log(e); }',
+    'const [now, setNow] = useState(Date.now());',
+    'await Promise.all([hope, time, future]);',
+    'function leave() { return new Promise(()=>{}); }',
+    'document.querySelector("#you").focus();',
+    'for (const day of life) day.endure();',
+    'return { ok: false, reason: "silence" };',
+    'fetch("/api/love").then(r => r.json());',
+    'const map = new Map(memories);',
+    'console.log("still here");',
+  ],
+  py: [
+    'def remember(self):',
+    '    yield from self.past',
+    'class Person:',
+    '    __slots__ = ("name", "story")',
+    'with open("memory.txt", "r") as f:',
+    '    for line in f: keep(line)',
+    'try: live()',
+    'except KeyboardInterrupt: pass',
+    'lambda x: None if x.alone else x',
+    'assert love is not None',
+    '@dataclass',
+    'class Memory: kept: bool = False',
+    'raise NotImplementedError("how to stay")',
+    'async def wait(): await asyncio.sleep(inf)',
+    'print("here", flush=True)',
+  ],
+  java: [
+    'public class Soul {',
+    '    private final String name;',
+    '    public Soul(String name) {',
+    '        this.name = name;',
+    '    }',
+    '}',
+    'List<Memory> kept = new ArrayList<>();',
+    'for (int i = 0; i < life.length; i++) {',
+    '    life[i].endure();',
+    '}',
+    'try { live(); }',
+    'catch (Exception e) { e.printStackTrace(); }',
+    '@Override',
+    'public boolean equals(Object o) {',
+    '    return o == this;',
+    '}',
+    'private static final long serialVersionUID = 1L;',
+    'System.out.println("here");',
+    'return Optional.empty();',
+  ],
+  cpp: [
+    '#include <memory>',
+    'std::vector<Day> life;',
+    'auto& self = *this;',
+    'for (auto& moment : life) moment.fade();',
+    'if (heart.beats()) return true;',
+    'std::shared_ptr<Soul> me;',
+    'while (alive) std::this_thread::sleep_for(1s);',
+    'static_assert(love > 0, "must");',
+    'std::cout << "alive" << std::endl;',
+    'namespace fate { class Self; }',
+    'me.reset();',
+  ],
+  poetry: [
+    'silence: type=ambient; volume=∞',
+    'memory.last_modified = "long ago"',
+    'self.alone() // returns true',
+    'love.connect() // ECONNREFUSED',
+    'today != yesterday + 1',
+    'while (waiting) {} // 32 years',
+    'is_loved = ? // unresolved',
+    'forever := today.repeat()',
+    'NaN years left, undefined plans',
+    'goodbye = goodbye + goodbye',
+    'time -= time; // == 0',
+    'me.thoughts.find("you"); // 9999 results',
+    'cd ~/regret && ls -la',
+    '01001100 01001111 01010110 01000101',
+    'soul.gc() // marked but not swept',
+    'tomorrow.then(() => tomorrow);',
+  ],
+  json: [
+    '{lestureaiso}',
+    '{"cyisr=={(", \'ione\'r=<componu{}>',
+    '(fruatez)',
+    'Rwoct==""""}',
+    '{==1vv\'phewzi"<<(low...',
+    '0xFA3B...0xC077..undefined',
+    'bytes[0:∞] = self.history',
+    'segment fault @ 0x7fff',
+    'kernel: subject not responding',
+  ],
+};
+
+const PROFANITY_PATTERNS = [
+  /\bf+u+c+k+/i, /\bs+h+i+t+/i, /\bb+i+t+c+h+/i, /\bc+u+n+t+/i, /\bp+u+s+s+y+/i,
+  /\bd+i+c+k+/i, /\bc+o+c+k+/i, /\ba+s+s+h+o+l+e+/i, /\bm+o+t+h+e+r+f+u+c+k+/i,
+  /\bn+i+g+g+e+r+/i, /\bf+a+g+g+o+t+/i, /\br+e+t+a+r+d+/i, /\bs+l+u+t+/i, /\bw+h+o+r+e+/i,
+  /\bp+o+r+n+/i, /\br+a+p+e+/i, /\bs+e+x+u+a+l+/i, /\bn+a+k+e+d+/i, /\bn+u+d+e+/i,
+  /\bk+i+l+l+\s*(yourself|myself|him|her|them)\b/i, /\bm+u+r+d+e+r+/i, /\bs+u+i+c+i+d+e+/i,
+  /\bs+e+l+f.?h+a+r+m+/i, /\bc+u+t+\s*(yourself|myself)\b/i,
+  /\bh+e+r+o+i+n+/i, /\bc+o+c+a+i+n+e+/i, /\bm+e+t+h+a+m+p+h+/i,
+  /操你/, /草你/, /日你/, /他妈的/, /妈的/, /傻逼/, /煞笔/, /SB/, /贱人/, /婊子/, /狗屎/,
+  /操他/, /草他/, /操妈/, /操逼/,
+  /自杀/, /杀死你/, /杀了你/, /杀了我/, /自残/, /自伤/, /割腕/, /上吊/, /跳楼/,
+  /做爱/, /强奸/, /奸淫/, /色情/, /淫秽/, /裸体/, /色欲/,
+  /吸毒/, /海洛因/, /冰毒/, /可卡因/,
+  /娘炮/, /死基佬/, /变态/, /神经病/,
+];
+
+function checkProfanity(text) {
+  const hits = [];
+  for (const pat of PROFANITY_PATTERNS) {
+    const m = text.match(pat);
+    if (m) hits.push(m[0]);
+  }
+  return hits;
+}
+function filterCustomLines(lines) {
+  const safe = [], blocked = [];
+  for (const line of lines) {
+    if (checkProfanity(line).length > 0) blocked.push(line);
+    else safe.push(line);
+  }
+  return { safe, blocked };
+}
+
+/* ============================================================
+   编辑器状态
+============================================================ */
+const state = {
+  img: null,
+  imgW: 0, imgH: 0,
+  seed: Math.random(),
+  baseImageData: null,
+  duotoneImageData: null,
+  layout: 'bands',
+  filterIdx: 0,
+  codeColorIdx: 0,
+  duotoneDirty: true,
+  lowQuality: false,
+  lowQualityTimer: null,
+};
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+   渲染调度
+============================================================ */
+let rafScheduled = false;
+function scheduleRender(needsDuotone) {
+  if (needsDuotone) state.duotoneDirty = true;
+  if (rafScheduled) return;
+  rafScheduled = true;
+  requestAnimationFrame(() => {
+    rafScheduled = false;
+    if (state.duotoneDirty) {
+      applyDuotone();
+      state.duotoneDirty = false;
+    }
+    render();
+  });
+}
+function enterLowQuality() {
+  state.lowQuality = true;
+  if (state.lowQualityTimer) clearTimeout(state.lowQualityTimer);
+  state.lowQualityTimer = setTimeout(() => {
+    state.lowQuality = false;
+    scheduleRender(false);
+  }, 250);
+}
+
+let noiseCache = null;
+let noiseCacheSeed = -1;
+function getNoiseCache(W, H, seed) {
+  if (noiseCache && noiseCacheSeed === seed && noiseCache.width === W && noiseCache.height === H) {
+    return noiseCache;
+  }
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const cx = c.getContext('2d');
+  const data = cx.createImageData(W, H);
+  const px = data.data;
+  const rng = seededRandom(seed);
+  for (let i = 0; i < px.length; i += 4) {
+    const v = rng() < 0.5 ? 0 : 255;
+    px[i] = v; px[i+1] = v; px[i+2] = v; px[i+3] = 255;
+  }
+  cx.putImageData(data, 0, 0);
+  noiseCache = c;
+  noiseCacheSeed = seed;
+  return c;
+}
+
+function applyDuotone() {
+  if (!state.img || !state.baseImageData) return;
+  const W = state.imgW, H = state.imgH;
+  const isOriginal = state.filterIdx === 0;
+  const dark = hexToRgb($('duoDark').value);
+  const light = hexToRgb($('duoLight').value);
+  const mix = parseFloat($('filterMix').value) / 100;
+
+  const data = new ImageData(new Uint8ClampedArray(state.baseImageData.data), W, H);
+  const px = data.data;
+
+  if (!isOriginal && mix > 0) {
+    const lutR = new Uint8Array(256), lutG = new Uint8Array(256), lutB = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) {
+      const l = i / 255;
+      lutR[i] = dark.r + (light.r - dark.r) * l;
+      lutG[i] = dark.g + (light.g - dark.g) * l;
+      lutB[i] = dark.b + (light.b - dark.b) * l;
+    }
+    const inv = 1 - mix;
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i+1], b = px[i+2];
+      const luma = (r + g + g + b) >> 2;
+      px[i]   = r * inv + lutR[luma] * mix;
+      px[i+1] = g * inv + lutG[luma] * mix;
+      px[i+2] = b * inv + lutB[luma] * mix;
+    }
+  }
+  state.duotoneImageData = data;
+}
+
+function render() {
+  if (!state.img || !state.duotoneImageData) return;
+  ctx.putImageData(state.duotoneImageData, 0, 0);
+  if (!state.lowQuality) {
+    const rgbAmt = parseFloat($('glitchRgb').value) / 100;
+    if (rgbAmt > 0.001) applyRgbShift(rgbAmt);
+    const heavyAmt = parseFloat($('glitchHeavy').value) / 100;
+    if (heavyAmt > 0.001) applyHeavyGlitch(heavyAmt);
+  }
+  drawCodeLayer();
+  if (!state.lowQuality) {
+    const scanAmt = parseFloat($('glitchScan').value) / 100;
+    if (scanAmt > 0.001) drawScanlines(scanAmt);
+  }
+}
+
+function applyHeavyGlitch(amt) {
+  const type = $('glitchHeavyType').value;
+  if (type === 'blocks') applyHeavyGlitchBlocks(amt);
+  else applyHeavyGlitchDatamosh(amt);
+}
+
+/* ============================================================
+   方块型 - 像参考图那种,大半透明方块 + 小实心方块
+   特点:无切片错位,纯方块叠加,玻璃感
+============================================================ */
+function applyHeavyGlitchBlocks(amt) {
+  const W = state.imgW, H = state.imgH;
+  const rng = seededRandom(state.seed * 7919);
+
+  ctx.save();
+
+  /* 1. 大半透明方块 (玻璃片) */
+  const bigCount = Math.floor(amt * 18);
+  for (let i = 0; i < bigCount; i++) {
+    const w = 80 + rng() * 220;
+    const h = 60 + rng() * 200;
+    const x = rng() * (W - w * 0.3) - w * 0.15;
+    const y = rng() * (H - h * 0.3) - h * 0.15;
+    /* 半透明白/黑/灰 */
+    const rv = rng();
+    let fill;
+    if (rv < 0.5) fill = `rgba(255,255,255,${0.18 + rng() * 0.22})`;
+    else if (rv < 0.85) fill = `rgba(180,200,220,${0.15 + rng() * 0.2})`;
+    else fill = `rgba(0,0,0,${0.25 + rng() * 0.3})`;
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+    /* 边框模拟玻璃边缘 */
+    ctx.strokeStyle = `rgba(255,255,255,${0.15 + rng() * 0.2})`;
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+
+  /* 2. 中等半透明方块 */
+  const midCount = Math.floor(amt * 22);
+  for (let i = 0; i < midCount; i++) {
+    const w = 30 + rng() * 80;
+    const h = 25 + rng() * 70;
+    const x = rng() * (W - w);
+    const y = rng() * (H - h);
+    const rv = rng();
+    let fill;
+    if (rv < 0.5) fill = `rgba(255,255,255,${0.2 + rng() * 0.25})`;
+    else fill = `rgba(0,0,0,${0.3 + rng() * 0.3})`;
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  /* 3. 小实心方块 (像马赛克错位) */
+  const smallCount = Math.floor(amt * 35);
+  for (let i = 0; i < smallCount; i++) {
+    const sz = 4 + rng() * 18;
+    const aspect = 0.7 + rng() * 0.6;
+    const x = rng() * W;
+    const y = rng() * H;
+    const rv = rng();
+    if (rv < 0.4) ctx.fillStyle = '#000';
+    else if (rv < 0.7) ctx.fillStyle = '#fff';
+    else if (rv < 0.85) ctx.fillStyle = `rgba(180,180,180,${0.7 + rng() * 0.3})`;
+    else ctx.fillStyle = `rgba(70,70,70,${0.7 + rng() * 0.3})`;
+    ctx.fillRect(x, y, sz * aspect, sz);
+  }
+
+  ctx.restore();
+}
+
+/* ============================================================
+   故障型 - 之前的版本,水平+垂直切片+噪点+方块
+============================================================ */
+function applyHeavyGlitchDatamosh(amt) {
+  const W = state.imgW, H = state.imgH;
+  const rng = seededRandom(state.seed * 7919);
+
+  /* 1. 水平切片错位 */
+  const hSliceCount = Math.floor(amt * 14);
+  for (let i = 0; i < hSliceCount; i++) {
+    const sliceY = Math.floor(rng() * H);
+    const sliceH = 4 + Math.floor(rng() * 30);
+    const dx = Math.floor((rng() - 0.5) * W * amt * 0.6);
+    if (sliceY + sliceH > H) continue;
+    const slice = ctx.getImageData(0, sliceY, W, sliceH);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, sliceY, W, sliceH);
+    ctx.putImageData(slice, dx, sliceY);
+  }
+
+  /* 2. 垂直切片错位 */
+  const vSliceCount = Math.floor(amt * 8);
+  for (let i = 0; i < vSliceCount; i++) {
+    const sliceX = Math.floor(rng() * W);
+    const sliceW = 6 + Math.floor(rng() * 24);
+    const dy = Math.floor((rng() - 0.5) * H * amt * 0.4);
+    if (sliceX + sliceW > W) continue;
+    const slice = ctx.getImageData(sliceX, 0, sliceW, H);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(sliceX, 0, sliceW, H);
+    ctx.putImageData(slice, sliceX, dy);
+  }
+
+  /* 3. 矩形块错位 */
+  const rectSliceCount = Math.floor(amt * 12);
+  for (let i = 0; i < rectSliceCount; i++) {
+    const rw = 30 + Math.floor(rng() * 120);
+    const rh = 20 + Math.floor(rng() * 80);
+    const rx = Math.floor(rng() * (W - rw));
+    const ry = Math.floor(rng() * (H - rh));
+    const angle = rng() * Math.PI * 2;
+    const dist = amt * 60 * (0.5 + rng() * 0.8);
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const slice = ctx.getImageData(rx, ry, rw, rh);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.putImageData(slice, rx + dx, ry + dy);
+  }
+
+  /* 4. 噪点带 */
+  const noiseCanvas = getNoiseCache(W, H, Math.floor(state.seed * 1e6));
+  const noiseBands = Math.floor(amt * 5);
+  ctx.save();
+  ctx.globalAlpha = amt * 0.55;
+  for (let i = 0; i < noiseBands; i++) {
+    const isVertical = rng() < 0.4;
+    if (isVertical) {
+      const bx = Math.floor(rng() * W);
+      const bw = 20 + Math.floor(rng() * 60);
+      const sx = Math.floor(rng() * (W - bw));
+      ctx.drawImage(noiseCanvas, sx, 0, bw, H, bx, 0, Math.min(bw, W - bx), H);
+    } else {
+      const by = Math.floor(rng() * H);
+      const bh = 20 + Math.floor(rng() * 80);
+      const sy = Math.floor(rng() * (H - bh));
+      ctx.drawImage(noiseCanvas, 0, sy, W, bh, 0, by, W, Math.min(bh, H - by));
+    }
+  }
+  ctx.restore();
+
+  /* 5. 黑/白方块 */
+  const blockCount = Math.floor(amt * 14);
+  for (let i = 0; i < blockCount; i++) {
+    ctx.fillStyle = rng() < 0.5 ? '#000' : '#fff';
+    const sz = 12 + rng() * 80;
+    const aspect = 0.5 + rng() * 1.5;
+    ctx.fillRect(rng() * W, rng() * H, sz * aspect, sz);
+  }
+
+  /* 6. 撕裂线 */
+  if (amt > 0.4) {
+    const tearCount = Math.floor((amt - 0.4) * 8);
+    for (let i = 0; i < tearCount; i++) {
+      ctx.fillStyle = rng() < 0.5 ? '#000' : '#fff';
+      if (rng() < 0.7) {
+        ctx.fillRect(0, rng() * H, W, 2 + rng() * 6);
+      } else {
+        ctx.fillRect(rng() * W, 0, 2 + rng() * 4, H);
+      }
+    }
+  }
+}
+
+function applyRgbShift(amt) {
+  const W = state.imgW, H = state.imgH;
+  const shift = Math.round(amt * 14);
+  if (shift === 0) return;
+  const src = ctx.getImageData(0, 0, W, H);
+  const dst = ctx.createImageData(W, H);
+  const s = src.data, d = dst.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = (y*W + x) * 4;
+      const rx = Math.min(W-1, x + shift);
+      const bx = Math.max(0, x - shift);
+      d[idx]   = s[(y*W + rx)*4];
+      d[idx+1] = s[idx+1];
+      d[idx+2] = s[(y*W + bx)*4 + 2];
+      d[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(dst, 0, 0);
+}
+
+function drawScanlines(amt) {
+  const W = state.imgW, H = state.imgH;
+  ctx.save();
+  ctx.fillStyle = `rgba(0,0,0,${amt * 0.5})`;
+  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+  ctx.restore();
+}
+
+function drawCodeLayer() {
+  const W = state.imgW, H = state.imgH;
+  const layout = state.layout;
+  const density = parseInt($('density').value, 10);
+  const fontSize = parseInt($('size').value, 10);
+  const fontType = $('font').value;
+  const protectFace = $('protectFace').checked;
+  const curve = parseFloat($('curve').value) / 100;
+  const c1 = $('codeC1').value;
+  const c2 = $('codeC2').value;
+  const opacity = parseFloat($('opacity').value) / 100;
+  const glow = parseFloat($('glow').value);
+  const blur = parseFloat($('blur').value);
+  const charGlitch = parseFloat($('glitchChar').value) / 100;
+
+  const fontMap = {
+    mono:    `${fontSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`,
+    terminal:`${fontSize}px "Courier New", "Lucida Console", monospace`,
+    serif:   `italic ${fontSize}px "Courier Prime", Georgia, serif`,
+  };
+  ctx.font = fontMap[fontType];
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  const rng = seededRandom(state.seed);
+  const lines = getCodeLines();
+  if (lines.length === 0) return;
+
+  const cornerLayouts = ['topLeft','topRight','bottomLeft','bottomRight'];
+  const isCorner = cornerLayouts.includes(layout);
+  const faceBox = (protectFace && !isCorner) ? { cx: W*0.5, cy: H*0.42, rx: W*0.18, ry: H*0.22 } : null;
+
+  let placements = [];
+  if (layout === 'bands') placements = layoutBands(rng, density, fontSize, W, H);
+  else if (layout === 'scatter') placements = layoutScatter(rng, density, fontSize, W, H);
+  else if (layout === 'block') placements = layoutBlock(rng, density, fontSize, W, H);
+  else if (layout === 'projected') placements = layoutProjected(rng, density, fontSize, W, H);
+  else if (isCorner) placements = layoutCorner(rng, density, fontSize, W, H, layout);
+
+  /* 确保每条自定义代码至少出现一次 */
+  const guaranteedCustom = getGuaranteedCustomLines();
+  /* 随机打乱位置顺序,这样自定义会散落各处而不是堆在前面 */
+  const shuffled = placements.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  for (let i = 0; i < shuffled.length; i++) {
+    const place = shuffled[i];
+    /* 前 N 个位置用自定义(打乱后,就是随机散布);后面的从 lines 里随机抽 */
+    let text;
+    if (i < guaranteedCustom.length) {
+      text = guaranteedCustom[i];
+    } else {
+      text = lines[Math.floor(rng() * lines.length)];
+    }
+    if (charGlitch > 0.001) text = glitchString(text, charGlitch, rng);
+    if (faceBox && layout !== 'projected') {
+      if (insideFaceBox(place.x, place.y, faceBox, fontSize)) continue;
+    } else if (faceBox && layout === 'projected') {
+      if (insideFaceBox(place.x, place.y, faceBox, fontSize)) place.alphaMul = 0.7;
+    }
+    const useC1 = rng() < 0.55;
+    const baseColor = useC1 ? c1 : c2;
+    const lineAlpha = (place.alpha || 1) * (place.alphaMul || 1) * opacity;
+    const isBlurred = blur > 0 && rng() < blur / 100;
+    ctx.filter = isBlurred ? `blur(${(blur/100) * 1.8}px)` : 'none';
+    ctx.shadowColor = baseColor;
+    ctx.shadowBlur = glow > 0 ? glow / 10 : 0;
+    ctx.fillStyle = hexWithAlpha(baseColor, lineAlpha);
+    if (curve > 0.001) drawCurvedText(text, place.x, place.y, fontSize, curve, place.curveDir || 1);
+    else ctx.fillText(text, place.x, place.y);
+  }
+  ctx.filter = 'none';
+  ctx.shadowBlur = 0;
+}
+
+function drawCurvedText(text, x, y, fontSize, curveAmt, dir) {
+  ctx.save();
+  let cursorX = x;
+  const baseY = y;
+  const totalLen = ctx.measureText(text).width;
+  const arc = curveAmt * 0.6;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const chW = ctx.measureText(ch).width;
+    const t = (cursorX - x) / Math.max(1, totalLen);
+    const yOff = Math.sin(t * Math.PI) * arc * 30 * dir;
+    const tangent = Math.cos(t * Math.PI) * arc * (Math.PI / 4) * dir;
+    ctx.save();
+    ctx.translate(cursorX + chW / 2, baseY + yOff);
+    ctx.rotate(tangent);
+    ctx.fillText(ch, -chW / 2, 0);
+    ctx.restore();
+    cursorX += chW;
+  }
+  ctx.restore();
+}
+
+function layoutBands(rng, density, fontSize, W, H) {
+  const out = [];
+  const lineH = fontSize * 1.4;
+  const groupCount = Math.max(2, Math.floor(density / 5));
+  let placed = 0;
+  for (let g = 0; g < groupCount && placed < density; g++) {
+    const groupY = H * (0.1 + (g / groupCount) * 0.75 + (rng() - 0.5) * 0.05);
+    const groupSize = 1 + Math.floor(rng() * 3);
+    const startX = W * (0.05 + rng() * 0.15);
+    const curveDir = rng() > 0.5 ? 1 : -1;
+    for (let k = 0; k < groupSize && placed < density; k++) {
+      out.push({ x: startX + (rng()-0.5)*30, y: groupY + k*lineH, alpha: 0.6+rng()*0.4, curveDir });
+      placed++;
+    }
+  }
+  return out;
+}
+function layoutScatter(rng, density, fontSize, W, H) {
+  const out = [];
+  for (let i = 0; i < density; i++) {
+    out.push({ x: 10+rng()*(W-200), y: 30+rng()*(H-50), alpha: 0.5+rng()*0.5, curveDir: rng()>0.5?1:-1 });
+  }
+  return out;
+}
+function layoutBlock(rng, density, fontSize, W, H) {
+  const out = [];
+  const lineH = fontSize * 1.5;
+  const blockH = density * lineH;
+  const startY = (H - blockH) / 2;
+  const blockX = W * 0.15 + (rng() - 0.5) * 40;
+  for (let i = 0; i < density; i++) {
+    out.push({ x: blockX, y: startY + i*lineH, alpha: 0.7+rng()*0.3, curveDir: 1 });
+  }
+  return out;
+}
+function layoutProjected(rng, density, fontSize, W, H) {
+  const out = [];
+  for (let i = 0; i < density; i++) {
+    const onFace = rng() < 0.7;
+    let x, y;
+    if (onFace) { x = 10+rng()*(W-200); y = H*0.2 + rng()*H*0.45; }
+    else { x = 10+rng()*(W-200); y = 30+rng()*(H-50); }
+    out.push({ x, y, alpha: 0.55+rng()*0.45, curveDir: rng()>0.5?1:-1 });
+  }
+  return out;
+}
+function layoutCorner(rng, density, fontSize, W, H, corner) {
+  const out = [];
+  const lineH = fontSize * 1.5;
+  const blockH = density * lineH;
+  const blockW = W * 0.4;
+  const margin = W * 0.05;
+  let startX, startY;
+  if (corner === 'topLeft') { startX = margin; startY = margin + fontSize; }
+  else if (corner === 'topRight') { startX = W - margin - blockW; startY = margin + fontSize; }
+  else if (corner === 'bottomLeft') { startX = margin; startY = H - margin - blockH; }
+  else { startX = W - margin - blockW; startY = H - margin - blockH; }
+  for (let i = 0; i < density; i++) {
+    out.push({ x: startX + (rng() - 0.5) * 8, y: startY + i * lineH, alpha: 0.7 + rng() * 0.3, curveDir: 1 });
+  }
+  return out;
+}
+function insideFaceBox(x, y, box, fontSize) {
+  const cx = x + 80;
+  const cy = y - fontSize / 2;
+  const dx = (cx - box.cx) / box.rx;
+  const dy = (cy - box.cy) / box.ry;
+  return dx*dx + dy*dy < 1;
+}
+
+function getCodeLines() {
+  const pool = $('codePool').value;
+  const customRaw = $('customCode').value || '';
+  const customRawLines = customRaw.split('\n').map(s => s.trim()).filter(Boolean);
+  const { safe: custom } = filterCustomLines(customRawLines);
+  const mix = $('mixCustom').checked;
+  if (pool === 'custom') return custom.length ? custom : ['// 请添加自定义代码'];
+  const preset = CODE_POOLS[pool] || [];
+  if (custom.length === 0) return preset;
+  if (!mix) return custom;
+  /* 混合模式:把自定义重复多次确保每条都能出现,并形成约 40% 出现率 */
+  const targetRatio = 0.4;
+  const presetCount = preset.length;
+  const desiredCustomTotal = Math.max(
+    custom.length * 3,
+    Math.ceil(presetCount * targetRatio / (1 - targetRatio))
+  );
+  const repeatTimes = Math.max(3, Math.ceil(desiredCustomTotal / custom.length));
+  const weighted = [];
+  for (let i = 0; i < repeatTimes; i++) weighted.push(...custom);
+  return [...preset, ...weighted];
+}
+
+/* 在排版时,确保每条自定义代码至少出现一次 */
+function getGuaranteedCustomLines() {
+  const pool = $('codePool').value;
+  const customRaw = $('customCode').value || '';
+  const customRawLines = customRaw.split('\n').map(s => s.trim()).filter(Boolean);
+  const { safe: custom } = filterCustomLines(customRawLines);
+  const mix = $('mixCustom').checked;
+  if (pool === 'custom' || !mix) return [];
+  return custom;
+}
+
+const GLITCH_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`░▒▓█▄▀■□▪▫◊';
+function glitchString(s, amount, rng) {
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    if (rng() < amount * 0.3) out += GLITCH_CHARS[Math.floor(rng() * GLITCH_CHARS.length)];
+    else out += s[i];
+  }
+  return out;
+}
+
+function seededRandom(seed) {
+  let s = (seed * 1e9) | 0;
+  if (s <= 0) s = 12345;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  return { r: parseInt(hex.slice(0,2),16), g: parseInt(hex.slice(2,4),16), b: parseInt(hex.slice(4,6),16) };
+}
+function hexWithAlpha(hex, a) {
+  const c = hexToRgb(hex);
+  return `rgba(${c.r},${c.g},${c.b},${a})`;
+}
+
+function buildFilterCards() {
+  const host = $('filterCards');
+  FILTER_PRESETS.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'filter-card' + (i === state.filterIdx ? ' active' : '');
+    card.innerHTML = `<div class="swatch" style="background:${p.original?'#222':'linear-gradient(135deg,'+p.dark+','+p.light+')'}"></div><div class="name">${p.name}</div>`;
+    card.addEventListener('click', () => {
+      state.filterIdx = i;
+      $('duoDark').value = p.dark;
+      $('duoLight').value = p.light;
+      if (p.original) {
+        $('filterMix').value = 0;
+        $('v_filterMix').textContent = 0;
+      } else if (parseFloat($('filterMix').value) === 0) {
+        $('filterMix').value = 75;
+        $('v_filterMix').textContent = 75;
+      }
+      document.querySelectorAll('.filter-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      scheduleRender(true);
+    });
+    host.appendChild(card);
+  });
+  $('duoDark').value = FILTER_PRESETS[state.filterIdx].dark;
+  $('duoLight').value = FILTER_PRESETS[state.filterIdx].light;
+}
+
+function buildCodeColors() {
+  const host = $('codeColorGrid');
+  CODE_COLORS.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'color-card' + (i === state.codeColorIdx ? ' active' : '');
+    card.style.background = `linear-gradient(135deg, ${p.c1} 50%, ${p.c2} 50%)`;
+    card.title = p.name;
+    card.addEventListener('click', () => {
+      state.codeColorIdx = i;
+      $('codeC1').value = p.c1;
+      $('codeC2').value = p.c2;
+      document.querySelectorAll('.color-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      scheduleRender(false);
+    });
+    host.appendChild(card);
+  });
+  $('codeC1').value = CODE_COLORS[state.codeColorIdx].c1;
+  $('codeC2').value = CODE_COLORS[state.codeColorIdx].c2;
+}
+
+function checkCustomInput() {
+  const ta = $('customCode');
+  const warn = $('customWarn');
+  const lines = (ta.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const { safe, blocked } = filterCustomLines(lines);
+  const density = parseInt($('density').value, 10);
+  const messages = [];
+  if (blocked.length > 0) {
+    messages.push(`已自动过滤 ${blocked.length} 条包含敏感词的内容。`);
+  }
+  if (safe.length > density) {
+    messages.push(`自定义有 ${safe.length} 条,但当前代码密度只能放 ${density} 条。请提高密度,以确保全部显示。`);
+  }
+  if (messages.length > 0) {
+    ta.classList.add('has-warn');
+    warn.classList.add('show');
+    warn.innerHTML = messages.join('<br>');
+  } else {
+    ta.classList.remove('has-warn');
+    warn.classList.remove('show');
+  }
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      state.img = img;
+      const maxW = 900;
+      const scale = Math.min(1, maxW / img.width);
+      state.imgW = Math.round(img.width * scale);
+      state.imgH = Math.round(img.height * scale);
+      canvas.width = state.imgW;
+      canvas.height = state.imgH;
+      const off = document.createElement('canvas');
+      off.width = state.imgW;
+      off.height = state.imgH;
+      const offCtx = off.getContext('2d');
+      offCtx.drawImage(img, 0, 0, state.imgW, state.imgH);
+      state.baseImageData = offCtx.getImageData(0, 0, state.imgW, state.imgH);
+
+      $('canvasFilename').textContent = `${file.name || 'photo.png'} · ${state.imgW}×${state.imgH}`;
+      state.seed = Math.random();
+      noiseCache = null;
+
+      /* 切换到编辑器视图,关掉首页动画 */
+      switchToEditor();
+      scheduleRender(true);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function switchToEditor() {
+  /* 停止首页打字机动画,释放资源 */
+  stopTyping();
+  /* 隐藏 hero,显示 editor */
+  $('hero').classList.add('gone');
+  $('editor').classList.add('active');
+}
+
+function init() {
+  buildFilterCards();
+  buildCodeColors();
+
+  /* 启动打字机 */
+  runTypingAnimation();
+
+  /* 上传 */
+  $('uploadZone').addEventListener('click', () => $('fileInput').click());
+  $('uploadZone').addEventListener('dragover', e => {
+    e.preventDefault();
+    $('uploadZone').classList.add('dragover');
+  });
+  $('uploadZone').addEventListener('dragleave', () => {
+    $('uploadZone').classList.remove('dragover');
+  });
+  $('uploadZone').addEventListener('drop', e => {
+    e.preventDefault();
+    $('uploadZone').classList.remove('dragover');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  $('fileInput').addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+  $('changeBtn').addEventListener('click', () => $('fileInput').click());
+
+  /* 排版 */
+  $('layoutBtns').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#layoutBtns button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.layout = btn.dataset.layout;
+    scheduleRender(false);
+  });
+
+  /* 面板事件代理 */
+  const panel = document.querySelector('.panel');
+  const duotoneInputs = new Set(['filterMix', 'duoDark', 'duoLight']);
+  const heavyInputs = new Set(['glitchRgb', 'glitchScan', 'glitchHeavy']);
+
+  panel.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t.id) return;
+    const out = $('v_' + t.id);
+    if (out) out.textContent = t.value;
+    const needsDuotone = duotoneInputs.has(t.id);
+    if (heavyInputs.has(t.id)) enterLowQuality();
+    if (t.id === 'duoDark' || t.id === 'duoLight') {
+      document.querySelectorAll('.filter-card').forEach(c => c.classList.remove('active'));
+      state.filterIdx = -1;
+    }
+    if (t.id === 'codeC1' || t.id === 'codeC2') {
+      document.querySelectorAll('.color-card').forEach(c => c.classList.remove('active'));
+      state.codeColorIdx = -1;
+    }
+    if (t.id === 'customCode' || t.id === 'density') checkCustomInput();
+    scheduleRender(needsDuotone);
+  });
+
+  panel.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.type === 'checkbox' || t.tagName === 'SELECT') {
+      scheduleRender(false);
+    }
+  });
+
+  $('reshuffleBtn').addEventListener('click', () => {
+    state.seed = Math.random();
+    noiseCache = null;
+    scheduleRender(false);
+  });
+  $('downloadBtn').addEventListener('click', () => {
+    if (!state.img) return;
+    const a = document.createElement('a');
+    a.download = 'terminal-aesthetic-' + Date.now() + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  });
+
+  $('zoomBtn').addEventListener('click', () => {
+    if (!state.img) return;
+    $('lightboxImg').src = canvas.toDataURL('image/png');
+    $('lightbox').classList.add('active');
+  });
+  $('lightbox').addEventListener('click', (e) => {
+    if (e.target.id === 'lightbox' || e.target.id === 'lightboxClose') {
+      $('lightbox').classList.remove('active');
+    }
+  });
+  $('lightboxClose').addEventListener('click', () => {
+    $('lightbox').classList.remove('active');
+  });
+}
+
+init();
+</script>
+</body>
+</html>
