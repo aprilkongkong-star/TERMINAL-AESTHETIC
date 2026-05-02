@@ -295,17 +295,11 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  @media (max-width: 980px) {
-    .editor.active { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
-  }
 
   .canvas-col {
     position: sticky;
     top: 70px;
     align-self: start;
-  }
-  @media (max-width: 980px) {
-    .canvas-col { position: sticky; top: 56px; }
   }
 
   .canvas-frame {
@@ -329,12 +323,9 @@
     font-size: 11px;
   }
   .canvas-toolbar .filename {
-    color: var(--text-1);
-    margin-right: auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: none;
   }
+  .canvas-toolbar { justify-content: flex-end; }
   .canvas-toolbar button {
     background: transparent;
     border: 1px solid var(--line-strong);
@@ -348,6 +339,16 @@
     flex-shrink: 0;
   }
   .canvas-toolbar button:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .canvas-toolbar button.primary {
+    background: var(--accent);
+    color: var(--bg-0);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .canvas-toolbar button.primary:hover {
+    background: #e8e8e8;
+    color: var(--bg-0);
+  }
 
   .canvas-stage {
     background: #000;
@@ -358,9 +359,6 @@
     max-height: calc(100vh - 200px);
     min-height: 300px;
   }
-  @media (max-width: 980px) {
-    .canvas-stage { max-height: 50vh; min-height: 240px; padding: 8px; }
-  }
   #canvas {
     display: block;
     max-width: 100%;
@@ -368,9 +366,6 @@
     width: auto;
     height: auto;
     object-fit: contain;
-  }
-  @media (max-width: 980px) {
-    #canvas { max-height: calc(50vh - 40px); }
   }
 
   /* ============================================================
@@ -388,13 +383,8 @@
     position: sticky;
     top: 70px;
     box-shadow: 0 4px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-  @media (max-width: 980px) {
-    .panel {
-      position: relative;
-      top: 0;
-      max-height: none;
-    }
+    touch-action: pan-y;  /* 锁定垂直滚动,防横滑滑块时页面横向晃动 */
+    -webkit-overflow-scrolling: touch;  /* 流畅滚动 */
   }
   .panel::-webkit-scrollbar { width: 6px; }
   .panel::-webkit-scrollbar-track { background: transparent; }
@@ -449,6 +439,7 @@
   .row input[type=range] {
     width: 100%;
     accent-color: var(--accent);
+    touch-action: manipulation;  /* 阻止 iOS 双击缩放,避免拖滑块时页面抖 */
   }
   .row input[type=text],
   .row input[type=color],
@@ -633,7 +624,87 @@
   }
   .lightbox .close:hover { color: var(--accent); border-color: var(--accent); }
 
-  /* 移动端适配 */
+  /* ============================================================
+     移动端适配 - 关键改进:
+     - 图片区域固定在屏幕顶部不动
+     - 参数面板在下方独立滚动
+     - 字体加大,滤镜色卡缩小
+     - 防止横滑触摸导致页面晃动
+  ============================================================ */
+  @media (max-width: 980px) {
+    /* 整个文档区禁止水平滑动,防止滑动滑块时页面晃 */
+    html { overflow-x: hidden; }
+    body { overflow-x: hidden; }
+    /* 编辑器激活时,body 不滚动,让面板独立滚 */
+    body.editing { overflow: hidden; height: 100dvh; }
+    body.editing .topbar { position: fixed; left: 0; right: 0; }
+    body.editing .editor { margin-top: 50px; }
+
+    .editor.active {
+      /* 改成 flex 列布局,占满除 topbar 外所有空间 */
+      display: flex;
+      flex-direction: column;
+      grid-template-columns: none;
+      gap: 0;
+      padding: 0;
+      height: calc(100dvh - 50px);  /* dvh 处理移动端 url 栏 */
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* 图片区域 - 固定在顶部不滚动 */
+    .canvas-col {
+      position: relative;
+      top: 0;
+      flex-shrink: 0;
+      background: var(--bg-0);
+      padding: 8px 8px 4px;
+    }
+
+    .canvas-frame {
+      border-radius: 8px;
+    }
+
+    .canvas-toolbar {
+      padding: 6px 8px;
+      gap: 6px;
+    }
+    .canvas-toolbar button {
+      padding: 8px 10px;
+      font-size: 12px;
+      flex: 1;
+    }
+
+    .canvas-stage {
+      max-height: 38vh;
+      min-height: 180px;
+      padding: 6px;
+    }
+    #canvas {
+      max-height: calc(38vh - 12px);
+    }
+
+    /* 参数面板 - 占满剩余空间,独立滚动 */
+    .panel {
+      position: relative;
+      top: 0;
+      flex: 1;
+      min-height: 0;  /* 关键:让 flex item 能正确收缩 */
+      max-height: none;
+      border-radius: 12px 12px 0 0;
+      margin: 4px 8px 0;
+      width: calc(100% - 16px);
+      /* overflow-y: auto 已经在桌面规则中定义,这里继承 */
+    }
+
+    /* 底部 actions 在 sticky panel 末端,需要明确 sticky 才不会滚走 */
+    .actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+    }
+  }
+
   @media (max-width: 600px) {
     .topbar { padding: 10px 14px; }
     .brand .tag { display: none; }
@@ -648,10 +719,41 @@
     .ide-line { padding: 0 12px; }
     .ide-line .ln { width: 24px; }
 
-    .panel { border-radius: 6px; }
-    .section { padding: 14px; }
-    .filter-grid { grid-template-columns: repeat(4, 1fr); }
+    /* 字体加大,占位符更小 */
+    .row label { font-size: 13px; }
+    .row label .val { font-size: 12px; }
+    .row input[type=text],
+    .row input[type=color],
+    .row textarea,
+    .row select {
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .row textarea { font-size: 13px; }
+    .checkbox-row { font-size: 13px; }
+    .section h3 { font-size: 11px; }
+    .panel-header { font-size: 12px; }
+
+    /* 排版按钮加大 */
+    .layout-grid button { padding: 10px 4px; font-size: 12px; }
+
+    /* 滤镜色卡 - 一排放更多,变小 */
+    .filter-grid { grid-template-columns: repeat(8, 1fr); gap: 4px; }
+    .filter-card { aspect-ratio: 1; }
+    .filter-card .name { font-size: 7px; padding: 1px 2px; letter-spacing: 0; }
+
+    /* 代码颜色 - 保持 8 列即可 */
     .color-grid { grid-template-columns: repeat(8, 1fr); }
+
+    /* 滑块加粗,易触摸 */
+    .row input[type=range] { height: 24px; }
+
+    /* 自定义代码 textarea 提示文字也清晰一些 */
+    .row textarea { min-height: 70px; }
+
+    /* 操作按钮区(底部固定) */
+    .actions { padding: 12px; }
+    .btn { font-size: 13px; padding: 12px; }
   }
 </style>
 </head>
@@ -723,6 +825,7 @@
         <div class="filename" id="canvasFilename">photo.png</div>
         <button id="changeBtn">换一张</button>
         <button id="zoomBtn">放大</button>
+        <button id="downloadBtnTop" class="primary">下载</button>
       </div>
       <div class="canvas-stage">
         <canvas id="canvas" width="800" height="1000"></canvas>
@@ -840,7 +943,7 @@
       </div>
       <div class="row">
         <label>自定义片段(每行一条)</label>
-        <textarea id="customCode" placeholder="if (you.see) you.are.seen();&#10;return null;&#10;每行一条,会随机抽取展示"></textarea>
+        <textarea id="customCode" placeholder="每行一条,会随机抽取展示"></textarea>
         <div class="warn-bubble" id="customWarn"></div>
       </div>
       <label class="checkbox-row">
@@ -1744,6 +1847,7 @@ function switchToEditor() {
   /* 隐藏 hero,显示 editor */
   $('hero').classList.add('gone');
   $('editor').classList.add('active');
+  document.body.classList.add('editing');
 }
 
 function init() {
@@ -1818,13 +1922,15 @@ function init() {
     noiseCache = null;
     scheduleRender(false);
   });
-  $('downloadBtn').addEventListener('click', () => {
+  function doDownload() {
     if (!state.img) return;
     const a = document.createElement('a');
     a.download = 'terminal-aesthetic-' + Date.now() + '.png';
     a.href = canvas.toDataURL('image/png');
     a.click();
-  });
+  }
+  $('downloadBtn').addEventListener('click', doDownload);
+  $('downloadBtnTop').addEventListener('click', doDownload);
 
   $('zoomBtn').addEventListener('click', () => {
     if (!state.img) return;
