@@ -461,7 +461,10 @@
   }
   .row textarea {
     min-height: 76px;
+    max-height: 76px;
+    height: 76px;
     resize: none;
+    overflow-y: auto;
     line-height: 1.5;
   }
   .row textarea.has-warn { border-color: var(--warn); }
@@ -598,6 +601,41 @@
     font-family: var(--mono);
   }
   .warn-bubble.show { display: block; }
+
+  /* Toast 提示 */
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: rgba(15, 20, 27, 0.95);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid var(--line-strong);
+    color: var(--text-0);
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .toast .icon {
+    color: var(--good);
+    font-size: 16px;
+  }
 
   .lightbox {
     display: none;
@@ -745,8 +783,12 @@
     /* 滑块加粗,易触摸 */
     .row input[type=range] { height: 24px; }
 
-    /* 自定义代码 textarea 提示文字也清晰一些 */
-    .row textarea { min-height: 70px; }
+    /* 自定义代码 textarea 锁定高度,内容多了内部滚 */
+    .row textarea {
+      min-height: 70px;
+      max-height: 70px;
+      height: 70px;
+    }
 
     /* 操作按钮区(底部固定) */
     .actions { padding: 12px; }
@@ -981,6 +1023,11 @@
 </div>
 
 <input type="file" id="fileInput" accept="image/*">
+
+<div class="toast" id="toast">
+  <span class="icon">✓</span>
+  <span class="text">已保存</span>
+</div>
 
 <div class="lightbox" id="lightbox">
   <button class="close" id="lightboxClose">×</button>
@@ -1906,6 +1953,15 @@ function init() {
     noiseCache = null;
     scheduleRender(false);
   });
+  let toastTimer = null;
+  function showToast(text) {
+    const t = $('toast');
+    t.querySelector('.text').textContent = text;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
   async function doDownload() {
     if (!state.img) return;
     const filename = 'terminal-aesthetic-' + Date.now() + '.png';
@@ -1919,6 +1975,7 @@ function init() {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
+        showToast('已保存到相册');
         return;
       } catch (err) {
         /* 用户取消分享 (AbortError) 不需要回退,其他错误才回退 */
@@ -1935,6 +1992,7 @@ function init() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('已保存');
   }
   $('downloadBtnTop').addEventListener('click', doDownload);
 
