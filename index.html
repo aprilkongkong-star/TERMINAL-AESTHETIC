@@ -440,6 +440,40 @@
     width: 100%;
     accent-color: var(--accent);
     touch-action: manipulation;  /* 阻止 iOS 双击缩放,避免拖滑块时页面抖 */
+    height: 32px;                 /* 加大热区,触摸更灵敏 */
+    -webkit-appearance: none;
+    background: transparent;
+  }
+  /* 自定义 track 和 thumb,提高触摸灵敏度 */
+  .row input[type=range]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--line-strong);
+    border-radius: 2px;
+  }
+  .row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-0);
+    margin-top: -9px;             /* 让 thumb 居中对齐 track */
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .row input[type=range]::-moz-range-track {
+    height: 4px;
+    background: var(--line-strong);
+    border-radius: 2px;
+  }
+  .row input[type=range]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-0);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   }
   .row input[type=text],
   .row input[type=color],
@@ -715,28 +749,34 @@
       letter-spacing: 0;
     }
 
-    /* 图片占屏幕约 3/4 高度,常驻顶部 */
+    /* 图片占屏幕约 65% 高度,常驻顶部 */
     .canvas-stage {
-      height: 70vh;
-      max-height: 70vh;
-      min-height: 320px;
+      height: 65vh;
+      max-height: 65vh;
+      min-height: 280px;
       padding: 6px;
     }
     #canvas {
-      max-height: calc(70vh - 12px);
+      max-height: calc(65vh - 12px);
     }
 
-    /* 参数面板 - 占剩余空间,内部独立滚动 */
+    /* 参数面板 - 锁死 30vh 高度,内部独立滚动 */
     .panel {
       position: relative;
       top: 0;
-      flex: 0 0 auto;             /* 不让 flex 自动伸缩 */
-      height: calc(100dvh - 70vh - 12px);   /* 锁死高度 = 视口 - 图片区 - 边距 */
-      min-height: 120px;
-      max-height: calc(100dvh - 70vh - 12px);
+      flex: 0 0 auto;
+      height: 30vh;
+      min-height: 200px;
+      max-height: 30vh;
       border-radius: 12px 12px 0 0;
       margin: 4px 8px 0;
       width: calc(100% - 16px);
+      /* 留出底部安全区,避免被 iOS 底部横条遮挡 */
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    /* 最后一个 section 多留点空间,避免最底部被遮 */
+    .panel .section:last-child {
+      padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
     }
   }
 
@@ -781,8 +821,6 @@
     .color-grid { grid-template-columns: repeat(8, 1fr); }
 
     /* 滑块加粗,易触摸 */
-    .row input[type=range] { height: 24px; }
-
     /* 自定义代码 textarea 锁定高度,内容多了内部滚 */
     .row textarea {
       min-height: 70px;
@@ -1783,8 +1821,8 @@ function buildFilterCards() {
         $('filterMix').value = 0;
         $('v_filterMix').textContent = 0;
       } else if (parseFloat($('filterMix').value) === 0) {
-        $('filterMix').value = 75;
-        $('v_filterMix').textContent = 75;
+        $('filterMix').value = 20;
+        $('v_filterMix').textContent = 20;
       }
       document.querySelectorAll('.filter-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
