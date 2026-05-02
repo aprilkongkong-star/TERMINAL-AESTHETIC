@@ -461,7 +461,7 @@
   }
   .row textarea {
     min-height: 76px;
-    resize: vertical;
+    resize: none;
     line-height: 1.5;
   }
   .row textarea.has-warn { border-color: var(--warn); }
@@ -692,9 +692,10 @@
     .panel {
       position: relative;
       top: 0;
-      flex: 1 1 0;
-      min-height: 120px;  /* 至少保证看得到几个参数 */
-      max-height: none;
+      flex: 0 0 auto;             /* 不让 flex 自动伸缩 */
+      height: calc(100dvh - 70vh - 12px);   /* 锁死高度 = 视口 - 图片区 - 边距 */
+      min-height: 120px;
+      max-height: calc(100dvh - 70vh - 12px);
       border-radius: 12px 12px 0 0;
       margin: 4px 8px 0;
       width: calc(100% - 16px);
@@ -1905,12 +1906,35 @@ function init() {
     noiseCache = null;
     scheduleRender(false);
   });
-  function doDownload() {
+  async function doDownload() {
     if (!state.img) return;
+    const filename = 'terminal-aesthetic-' + Date.now() + '.png';
+
+    /* 用 toBlob 获取真正的 PNG 二进制 */
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return;
+
+    /* 优先尝试 Web Share API(手机端可以调出"存入相册" / "保存图像")*/
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (err) {
+        /* 用户取消分享 (AbortError) 不需要回退,其他错误才回退 */
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+
+    /* 回退:用 Blob URL 触发下载,比 dataURL 兼容性好 */
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.download = 'terminal-aesthetic-' + Date.now() + '.png';
-    a.href = canvas.toDataURL('image/png');
+    a.download = filename;
+    a.href = url;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   $('downloadBtnTop').addEventListener('click', doDownload);
 
