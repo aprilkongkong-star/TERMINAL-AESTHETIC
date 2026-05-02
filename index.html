@@ -666,42 +666,37 @@
     }
 
     .canvas-toolbar {
-      padding: 6px 8px;
-      gap: 6px;
+      padding: 5px 6px;
+      gap: 4px;
     }
     .canvas-toolbar button {
-      padding: 8px 10px;
-      font-size: 12px;
+      padding: 6px 4px;
+      font-size: 11px;
       flex: 1;
+      letter-spacing: 0;
     }
 
+    /* 图片占屏幕约 3/4 高度,常驻顶部 */
     .canvas-stage {
-      max-height: 38vh;
-      min-height: 180px;
+      height: 70vh;
+      max-height: 70vh;
+      min-height: 320px;
       padding: 6px;
     }
     #canvas {
-      max-height: calc(38vh - 12px);
+      max-height: calc(70vh - 12px);
     }
 
-    /* 参数面板 - 占满剩余空间,独立滚动 */
+    /* 参数面板 - 占剩余空间,内部独立滚动 */
     .panel {
       position: relative;
       top: 0;
-      flex: 1;
-      min-height: 0;  /* 关键:让 flex item 能正确收缩 */
+      flex: 1 1 0;
+      min-height: 120px;  /* 至少保证看得到几个参数 */
       max-height: none;
       border-radius: 12px 12px 0 0;
       margin: 4px 8px 0;
       width: calc(100% - 16px);
-      /* overflow-y: auto 已经在桌面规则中定义,这里继承 */
-    }
-
-    /* 底部 actions 在 sticky panel 末端,需要明确 sticky 才不会滚走 */
-    .actions {
-      position: sticky;
-      bottom: 0;
-      z-index: 5;
     }
   }
 
@@ -824,6 +819,7 @@
       <div class="canvas-toolbar">
         <div class="filename" id="canvasFilename">photo.png</div>
         <button id="changeBtn">换一张</button>
+        <button id="reshuffleBtnTop">重洗</button>
         <button id="zoomBtn">放大</button>
         <button id="downloadBtnTop" class="primary">下载</button>
       </div>
@@ -834,8 +830,6 @@
   </div>
 
   <div class="panel">
-    <div class="panel-header">// CONTROL_PANEL</div>
-
     <div class="section">
       <h3><span class="num">[01]</span> 排版</h3>
       <div class="row">
@@ -980,10 +974,6 @@
       </div>
     </div>
 
-    <div class="actions">
-      <button class="btn" id="reshuffleBtn">REGENERATE</button>
-      <button class="btn primary" id="downloadBtn">DOWNLOAD</button>
-    </div>
   </div>
 
 </div>
@@ -1690,20 +1680,12 @@ function getCodeLines() {
   const preset = CODE_POOLS[pool] || [];
   if (custom.length === 0) return preset;
   if (!mix) return custom;
-  /* 混合模式:把自定义重复多次确保每条都能出现,并形成约 40% 出现率 */
-  const targetRatio = 0.4;
-  const presetCount = preset.length;
-  const desiredCustomTotal = Math.max(
-    custom.length * 3,
-    Math.ceil(presetCount * targetRatio / (1 - targetRatio))
-  );
-  const repeatTimes = Math.max(3, Math.ceil(desiredCustomTotal / custom.length));
-  const weighted = [];
-  for (let i = 0; i < repeatTimes; i++) weighted.push(...custom);
-  return [...preset, ...weighted];
+  /* 混合模式:这里只返回预设,自定义由 guaranteedCustom 在 drawCodeLayer 中
+     占据前 K 个位置,每条恰好出现一次,不重复 */
+  return preset;
 }
 
-/* 在排版时,确保每条自定义代码至少出现一次 */
+/* 混合模式下需要保证至少各出现一次的自定义条目 */
 function getGuaranteedCustomLines() {
   const pool = $('codePool').value;
   const customRaw = $('customCode').value || '';
@@ -1917,7 +1899,7 @@ function init() {
     }
   });
 
-  $('reshuffleBtn').addEventListener('click', () => {
+  $('reshuffleBtnTop').addEventListener('click', () => {
     state.seed = Math.random();
     noiseCache = null;
     scheduleRender(false);
@@ -1929,7 +1911,6 @@ function init() {
     a.href = canvas.toDataURL('image/png');
     a.click();
   }
-  $('downloadBtn').addEventListener('click', doDownload);
   $('downloadBtnTop').addEventListener('click', doDownload);
 
   $('zoomBtn').addEventListener('click', () => {
