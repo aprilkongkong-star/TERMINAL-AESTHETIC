@@ -637,17 +637,18 @@
     body { overflow-x: hidden; }
     /* 编辑器激活时,body 不滚动,让面板独立滚 */
     body.editing { overflow: hidden; height: 100dvh; }
-    body.editing .topbar { position: fixed; left: 0; right: 0; }
-    body.editing .editor { margin-top: 50px; }
+    /* 移动端编辑模式下隐藏顶栏,给参数区腾出空间 */
+    body.editing .topbar { display: none; }
+    body.editing .editor { margin-top: 0; }
 
     .editor.active {
-      /* 改成 flex 列布局,占满除 topbar 外所有空间 */
+      /* 改成 flex 列布局,占满整个视口高度(顶栏隐藏后) */
       display: flex;
       flex-direction: column;
       grid-template-columns: none;
       gap: 0;
       padding: 0;
-      height: calc(100dvh - 50px);  /* dvh 处理移动端 url 栏 */
+      height: 100dvh;
       max-width: 100%;
       overflow: hidden;
     }
